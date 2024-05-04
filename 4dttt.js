@@ -61,23 +61,6 @@ function combinations(set) {
 const cartesian = (...a) => a.reduce((a, b) => a.flatMap(d => b.map(e => [d, e].flat())));
 
 
-const dims = [0, 1, 2, 3];
-const strides = [125, 25, 5, 1];
-const posits = [0, 1, 2, 3, 4]; // possible positions along a dimension
-const grid = new Array(625);
-const moves = new Array();
-
-const pb = 6; // boundary between planes
-const sqb = 2; // boundary between squares
-const sqs = 16; //square size
-
-
-const canvas = document.getElementById("the_canvas");
-const sqbc = "black";
-const sqc = "lightgray";
-const pbc = "dodgerblue";
-const wc = "lightsalmon";
-
 // multiply  2 arrays of equal length, return an array of the products element by element
 function product(ar1, ar2){
 	let result = [];
@@ -121,9 +104,68 @@ function pos_coords(pos){ // most significant to least significant
 	return [y1, y2, x1, x2];
 }
 
+const dims = [0, 1, 2, 3];
+const strides = [125, 25, 5, 1];
+const posits = [0, 1, 2, 3, 4]; // possible positions along a dimension
+
+function compli_coords(coords, direction){
+    let result = [];
+    for (let ii = 0; ii < coords.length; ii++){
+        if (direction[ii] > 0){
+            result.push(coords[ii]);
+        } else {
+            result.push(4 - coords[ii]);
+        }
+    }
+    return result;
+}
+
+function get_paths(pos){
+    let result = [];
+    let coords = pos_coords(pos);
+    // do the stright line paths separately. All points are in 4.
+    for (let stridei = 0; stridei < strides.length; stridei++){
+            let stride = strides[stridei];
+            let steps = Math.floor(pos / stride);
+            result.push([pos - steps * stride, stride]);
+    }
+    for (let var_dimc = 2; var_dimc < 5; var_dimc++){
+        let all_var_dims = k_combinations(dims, var_dimc);
+        for (let var_dimi = 0; var_dimi < all_var_dims.length; var_dimi++){
+            let var_dims = all_var_dims[var_dimi];
+            let other_dims = var_dims.slice(1);
+            let base_stride = strides[var_dims[0]];
+            // console.log('base_stride', base_stride);
+            let all_dirs;
+            if (other_dims.length == 1){
+                all_dirs = [[1], [-1]];
+            } else {
+                all_dirs = cartesian(...Array(other_dims.length).fill([1, -1]));
+            }
+            for (let dirsi = 0; dirsi < all_dirs.length; dirsi++){
+                //console.log("others", other_dims, "dirs", all_dirs[dirsi]);
+                let comps = compli_coords(elements_at(coords, other_dims), all_dirs[dirsi]);
+                if (comps.every(function(elm)  { return elm === coords[var_dims[0]]} )){
+                // console.log("ms", coords[var_dims[0]], "others", other_dims, "dirs",  all_dirs[dirsi], "comps", comps);
+                    let stride = base_stride;
+                    for (let other_dimsi = 0; other_dimsi < other_dims.length; other_dimsi++){
+                        stride += strides[other_dims[other_dimsi]] * all_dirs[dirsi][other_dimsi];
+                        // console.log(strides[other_dims[other_dimsi]], all_dirs[dirsi][other_dimsi]);
+                    }
+                    let base = pos - stride * coords[[var_dims[0]]];
+                    result.push([base, stride])
+                }
+            }
+        }
+    }
+    return result;
+
+}
+
+
 // check if there is a win along the path with base, stride. If so returns letter of win (x or o)
-function check_win_line(base, stride){
-	letter = "?";
+function check_win_line(grid, base, stride){
+	let letter = "?";
 	for (let pos = base; pos < base + stride * 5; pos += stride){
 		//console.log("pos", pos, "grid[pos]", grid[pos]);
 		if (grid[pos] == ""){ //blank
@@ -152,62 +194,6 @@ function check_win_line(base, stride){
  * depending on how diagonal.
  * */
 
-function get_basebases(changed_dims){
-	if (changed_dims.length === 4){
-		return [0];
-	}
-	let constdims = dims.filter(function (e) {return !changed_dims.includes(e)});
-	let basebases = []
-	let allconstpos = cartesian(...(Array(constdims.length).fill(posits)));
-	for (let constposi in allconstpos){
-		let constpos = allconstpos[constposi];
-		const conststrides = elements_at(strides, constdims);
-		const basebase = zip(constpos, conststrides);
-		basebases.push(basebase);
-	}
-	return basebases;
-}
-
-function get_basestrides(basebase, changed_dims){
-	let constdims = dims.filter(function (e) {return !changed_dims.includes(e)});
-	if (constdims.length == 3){
-		return [[basebase, strides[changed_dims[0]]]];
-	}
-}
-
-function check_win(){
-	let ii, diags, letter, stride;
-	for (let changec = 1; changec < 5; changec++){ //changing dimension count
-		let allchangeds = k_combinations(dims, changec);
-		//console.log("allchangeds", allchangeds);
-		for (let changed_dimi in allchangeds){ // for..in iterates over indices, not elements
-			let changed_dims = allchangeds[changed_dimi];
-			let basebases = get_basebases(changed_dims);
-			//console.log("basebases", basebases);
-			for (let basebasei in basebases){
-				let basebase = basebases[basebasei];
-				let basestrides = get_basestrides(basebase, changed_dims);
-				for (let basestrides_i in  basestrides) {
-					let [base, stride] = basestrides[basestrides_i];
-				    //console.log("base", base, "stride", stride);
-					let letter = check_win_line(base, stride);
-					if (letter){
-						console.log("win:", letter, base, stride);
-						return [letter, base, stride];
-					}
-				}
-		    }
-		}
-	}
-}
-
-function new_game(){
-	let ii;
-	for (ii = 0; ii < 625; ii++){
-		grid[ii] = "";
-	}
-	moves.length = 0;
-}
 
 function get_text_pos(coords){
 	let [y1, y2, x1, x2] = coords;
@@ -219,6 +205,69 @@ function get_text_pos(coords){
 	return [x, y];
 }
 
+class GameState {
+	constructor() {
+		this.grid =  Array(625).fill(''),
+		this.moves= [];
+		this.pom = 'x'; // player on move
+		this.done = false;
+		this.winner = null;
+		this.win_line = null;
+	}
+	toggle_pom() {
+		if (this.pom === 'x'){
+			this.pom = 'o';
+		} else {
+			this.pom = 'x';
+		}
+	}
+	append_move(pos) {
+			//console.log("appending move?");
+			this.grid[pos] = this.pom;
+			this.moves.push(pos);
+			let paths = get_paths(pos);
+			for (let pathi = 0; pathi < paths.length; pathi++){
+					let [base, stride] = paths[pathi];
+					let winner = check_win_line(this.grid, base, stride);
+					if (winner){
+							console.log("winner", this.pom);
+							this.winner = this.pom;
+							this.done = true;
+							this.win_line = [base, stride];
+							break;
+					}
+			}
+			if (!this.winner){
+				this.toggle_pom();
+			}
+	}
+    undo_move() {
+			//console.log("undoing move");
+			if (this.moves.length == 0){
+					return;
+			}
+			const pos = this.moves.pop();
+			this.grid[pos] = "";
+			console.log("moves", this.moves);
+			this.winner = null;
+			this.win_line = null;
+			this.done = false;
+			this.toggle_pom();
+	}
+}
+
+let the_game = new GameState();
+const canvas = document.getElementById('the_canvas');
+
+const pb = 6; // boundary between planes
+const sqb = 2; // boundary between squares
+const sqs = 16; //square size
+
+const sqbc = "black";
+const sqc = "lightgray";
+const pbc = "dodgerblue";
+const wc = "lightsalmon";
+
 
 function redraw_canvas(){
 	const ctx = canvas.getContext("2d");
@@ -226,7 +275,7 @@ function redraw_canvas(){
 	ctx.fillRect(0, 0, canvas.width, canvas.height);
 	let ii, iii;
 	let x, y;
-	// boundaries between planes
+	// boundaries between squares in a plane
 	ctx.fillStyle = sqbc;
 	for (ii = 0; ii < 6; ii++){
 			for (iii = 0; iii < 6; iii++){
@@ -236,7 +285,7 @@ function redraw_canvas(){
 					ctx.fillRect(0, y, canvas.width, sqb);
 			}
 	}
-	// boundaries between squares in a plane
+	// boundaries between planes
 	ctx.fillStyle = pbc;
 	for (ii = 0; ii < 6; ii++){
 		x = ii * (pb + sqs * 5 + sqb * 6);
@@ -244,15 +293,26 @@ function redraw_canvas(){
 		y = ii * (pb + sqs * 5 + sqb * 6);
 		ctx.fillRect(0, y, canvas.width, pb);
 	}
-	const win = check_win();
+	if (the_game.winner){
+			ctx.fillStyle = wc;
+			const [base, stride] = the_game.win_line;
+			console.log("base", base, "stride", stride);
+			for (let wpos = base; wpos < base + stride * 5; wpos += stride){
+			     const coords = pos_coords(wpos);
+				 y = coords[0] * (pb + sqs * 5 + sqb * 6) + coords[1] * (sqb + sqs) + pb + sqb; 
+				 x = coords[2] * (pb + sqs * 5 + sqb * 6) + coords[3] * (sqb + sqs) + pb + sqb;
+				 console.log("x", x, "y", y);
+				 ctx.fillRect(x, y, sqs, sqs);
+			}
+	}
 	// noughts and crosses
 	ctx.fillStyle = sqbc;
 	for (ii = 0; ii < 625; ii++){
-		if (grid[ii] != ''){ 
-		    coords = pos_coords(ii);
+		if (the_game.grid[ii] != ''){ 
+		    const coords = pos_coords(ii);
 			text_pos = get_text_pos(coords);
 			//console.log("coords", coords,"text_pos",  text_pos[0], text_pos[1]);
-			ctx.fillText(grid[ii], text_pos[0], text_pos[1]);
+			ctx.fillText(the_game.grid[ii], text_pos[0], text_pos[1]);
 		}
 	}
 
@@ -285,17 +345,40 @@ function get_click_square(e) {
 }
 
 function handle_canvas_click(e) {
+	if (the_game.done) {
+			return;
+	}
 	pos = get_click_square(e);
-	if (grid[pos] == ""){
-        grid[pos] = 'x';
+	//console.log("clicked", pos);
+	if (the_game.grid[pos] == ""){
+		the_game.append_move(pos);
 		redraw_canvas();
 	}
-};
+}
 
-new_game();
+function handle_undo(){
+		const mode = document.getElementById("frm").elements["mode"].value;
+		console.log("mode", mode);
+		if (mode === "pvp"){
+				the_game.undo_move();
+		} else {
+				the_game.undo_move();
+				the_game.undo_move();
+		}
+		redraw_canvas();
+}
+
+function handle_new_game(){
+		console.log("new game");
+		the_game = new GameState();
+		redraw_canvas();
+}
+
 // total canvas size should be pb * 6 + sqs * 25 + sqb * 30
 canvas.width = pb * 6 + sqs * 25 + sqb * 30;
 canvas.height = pb * 6 + sqs * 25 + sqb * 30;
-canvas.onclick=handle_canvas_click;
+canvas.onclick = handle_canvas_click;
+document.getElementById('btn_new_game').onclick = handle_new_game;
+document.getElementById('btn_undo').onclick = handle_undo;
 redraw_canvas();
 
