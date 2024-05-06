@@ -186,6 +186,73 @@ function check_win_line(grid, base, stride){
 	}
 }
 
+function other_player(player){
+        if (player == 'x'){
+                return 'o';
+        }
+        return 'x';
+}
+
+class LetterCounts {
+        constructor(counts) {
+                if (counts) {
+                        this.counts = structuredClone(counts);
+                } else {
+                        this.counts = Object();
+                        for (let ii = 0; ii < 6; ii++){
+                                for (let iii = 0; iii < 6 - ii; iii++){
+                                        this.counts['' + ii + '' + iii] = 0;
+                                }
+                        }
+                }
+        }
+        adj_counts(grid, base, stride, letter){
+            let xs = 0;
+            let os = 0;
+            for (let pos=base; pos < base + stride * 5; pos += stride){
+                if (grid[pos] == 'x'){
+                    xs++;
+                }
+                if (grid[pos] == 'o'){
+                    os++;
+                }
+            }
+            let idx = '' + xs + '' + os;
+            this.counts[idx] += 1;
+            if (letter == 'x'){
+                    xs -= 1;
+            } else {
+                    os -= 1;
+            }
+            this.counts['' + xs + '' + os] -= 1;
+        }
+        ut_counts(player, idx){
+                if (player === 'x'){
+                        return this.counts[idx];
+                }
+                return this.counts[idx[1] + idx[0]];
+        }
+}
+function score_counts(letter_counts, player){
+        function ut(idx){
+                return letter_counts.ut_counts(player, idx);
+        }
+        if (ut('50') > 0) {
+                return 2000000000;
+        }
+        if (ut('04') > 0) {
+                return -1000000000;
+        }
+        if (ut('40') > 1) {
+                return 1000000000;
+        }
+        // adjust these as seems appropriate
+        return 1000 * ut('40' ) + 600 * ut('30') + 200 * ut('20' ) + 100 * ut('10') -
+                (600 * ut('03') + 200 * ut('02') + 100 * ut('01'));
+
+}
+
+
 /*To win a game we get five in a row with 1, 2, 3 or 4 dimensions changing, and the others (if any) statying constant.
  * A win is characerized by a base (lowest grid position) and a stride.
  * A change along a dimension changes 1, 5, 25, or 125. If more than one dimension changes,
@@ -206,20 +273,18 @@ function get_text_pos(coords){
 }
 
 class GameState {
-	constructor() {
+	constructor(mode) {
+		this.mode = mode;
 		this.grid =  Array(625).fill(''),
 		this.moves= [];
 		this.pom = 'x'; // player on move
 		this.done = false;
 		this.winner = null;
 		this.win_line = null;
+		this.computer_moving = false;
 	}
 	toggle_pom() {
-		if (this.pom === 'x'){
-			this.pom = 'o';
-		} else {
-			this.pom = 'x';
-		}
+		this.pom = other_player(this.pom);
 	}
 	append_move(pos) {
 			//console.log("appending move?");
@@ -256,8 +321,78 @@ class GameState {
 	}
 }
 
-let the_game = new GameState();
+function get_random_move(grid, pom){
+		let maybe = Math.floor(Math.random() * 625);
+		while (grid[maybe] != ''){
+				maybe = Math.floor(Math.random() * 625);
+		}
+		return maybe;
+}
+
+function get_2ply_move(grid, pom){
+		const them = other_player(pom);
+		const lc = new LetterCounts();
+		// console.log("counts", lc.counts);
+		let lines_checked = 0;
+		let usmax = -20000000000;
+		let maxpos;
+		let themmax;
+		let negthem;
+		for (let posi = 0; posi < 75; posi++){
+				if (grid[posi] != ''){
+						continue;
+				}
+				const grid1 = grid.slice();
+				grid1[posi] = pom;
+				const lc1 = new LetterCounts();
+				//console.log("lc1", lc1);
+				const paths1 = get_paths(posi);
+				for (let paths1i = 0; paths1i < paths1.lenth; paths1i++){
+						const [base1, slice1] = paths1[paths1i];
+						lc1.adj_counts(grid1, base1, stride1, pom);
+				}
+				const score1 = score_counts(lc1, pom);
+				if (score1 > 1000000000) {
+						console.log('winner! chicken dinner!'); // should break here
+						maxpos = posi;
+						break;
+				}
+
+				themmax = -2000000000;
+				themmax = -2000000000;
+				for (let posii = 0; posii < 625; posii++){
+						if (grid1[posii] != ''){
+								continue;
+						}
+						const grid2 = grid1.slice();
+						const lc2 = new LetterCounts(lc1.counts);
+						const paths2 = get_paths(posii);
+						for (let paths2i = 0; paths2i < paths2.length; paths2i++){
+								lines_checked += 1;
+								const [base2, stride2] = paths2[paths2i];
+								//console.log("lc2", lc2);
+								lc2.adj_counts(grid2, base2, stride2, them);
+						}
+						const score2 = (score_counts(lc2, them) + Math.random() * 200);
+						//console.log("score2", score2, "themmax", themmax);
+						if (score2 > themmax) {
+								themmax = score2;
+								//console.log("posi", posi, "best possii (so far)", posii);
+						}
+				}
+				negthem = -themmax;
+				if (negthem > usmax){
+						usmax = negthem;
+						maxpos = posi;
+				}
+				//console.log("posi", posi, "themmax", themmax, "usmax", usmax);
+		}
+		return maxpos;
+}
+
 const canvas = document.getElementById('the_canvas');
+const mode = document.getElementById("frm").elements["mode"].value;
+let the_game = new GameState(mode);
 
 const pb = 6; // boundary between planes
 const sqb = 2; // boundary between squares
@@ -348,18 +483,29 @@ function handle_canvas_click(e) {
 	if (the_game.done) {
 			return;
 	}
+	if (the_game.computer_moving){
+			return;
+	}
 	pos = get_click_square(e);
 	//console.log("clicked", pos);
 	if (the_game.grid[pos] == ""){
 		the_game.append_move(pos);
 		redraw_canvas();
+		if (the_game.done) return;
+		if (the_game.mode == 'pvc'){
+				the_game.computer_moving = true;
+				const computer_move = get_random_move(the_game.grid, the_game.pom);
+				// const computer_move = get_2ply_move(the_game.grid, the_game.pom);
+				the_game.append_move(computer_move);
+				the_game.computer_moving = false;
+				redraw_canvas();
+		}
 	}
 }
 
 function handle_undo(){
-		const mode = document.getElementById("frm").elements["mode"].value;
 		console.log("mode", mode);
-		if (mode === "pvp"){
+		if (the_game.mode === "pvp"){
 				the_game.undo_move();
 		} else {
 				the_game.undo_move();
@@ -369,8 +515,9 @@ function handle_undo(){
 }
 
 function handle_new_game(){
+		const mode = document.getElementById("frm").elements["mode"].value;
 		console.log("new game");
-		the_game = new GameState();
+		the_game = new GameState(mode);
 		redraw_canvas();
 }
 

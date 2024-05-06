@@ -70,3 +70,76 @@ export function elements_at(target, positions){
     return result;
 }
 
+export function other_player(player){
+		if (player == 'x'){
+				return 'o';
+		}
+		return 'x';
+}
+
+/* store counts of letters along lines. Counts member is indexed as 'xo'.
+ * counts from a player's perspecive is 'ut' for us/them e.g. prom o perspective
+ * ot_counts('31') is the number of lines o has 3 and x has 1, corresponing to counts['13']
+ */
+
+export class LetterCounts {
+		constructor(counts) {
+				if (counts) {
+						this.counts = structuredClone(counts);
+				} else {
+						this.counts = Object();
+						for (let ii = 0; ii < 6; ii++){
+								for (let iii = 0; iii < 6 - ii; iii++){
+										this.counts['' + ii + '' + iii] = 0;
+								}
+						}
+				}
+		}
+		adj_counts(grid, base, stride, letter){
+			let xs = 0;
+			let os = 0;
+			for (let pos=base; pos < base + stride * 5; pos += stride){
+				if (grid[pos] == 'x'){
+					xs++;
+				}
+				if (grid[pos] == 'o'){
+					os++;
+				}
+			}
+			let idx = '' + xs + '' + os;
+			this.counts[idx] += 1;
+			if (letter == 'x'){
+					xs -= 1;
+			} else {
+					os -= 1;
+			}
+			this.counts['' + xs + '' + os] -= 1;
+		}
+		ut_counts(player, idx){
+				if (player === 'x'){
+						return this.counts[idx];
+				}
+				return this.counts[idx[1] + idx[0]];
+		}
+}
+// score counts from the point of view of player, after that player has moved.
+// It matters because after a player has moved, if the other player still has a 4 move line he is screwed,
+// but if the player has just1 4 move line it is not all that special.
+export function score_counts(letter_counts, player){
+		function ut(idx){
+				return letter_counts.ut_counts(player, idx);
+		}
+		if (ut('50') > 0) {
+				return 2000000000;
+		}
+		if (ut('04') > 0) {
+				return -1000000000;
+		}
+		if (ut('40') > 1) {
+				return 1000000000;
+		}
+		// adjust these as seems appropriate
+		return 1000 * ut('40' ) + 600 * ut('30') + 200 * ut('20' ) + 100 * ut('10') -
+				(600 * ut('03') + 200 * ut('02') + 100 * ut('01'));
+
+}

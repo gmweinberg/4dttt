@@ -2,7 +2,8 @@
 //test a get_lines function. It shoudl return a list of lines that pass through a point
 
 
-import { k_combinations, strides, dims, posits, cartesian, pos_coords, elements_at} from "./util.mjs"
+import { k_combinations, strides, dims, posits, cartesian, pos_coords, elements_at,
+         other_player, LetterCounts, score_counts} from "./util.mjs"
 // complimetary coords for diagonal. direction is ositiive or negative.
 function compli_coords(coords, direction){
 	let result = [];
@@ -59,13 +60,71 @@ function get_paths(pos){
 
 }
 
-function get_diag_paths(pos){
-	let result = [];
-	let coords = pos_coords(pos);
-	console.log("coords", coords);
-	return result;
+
+//let paths = get_paths(312);
+// console.log(paths);
+//
+const start = Date.now();
+const lc = new LetterCounts();
+const grid = Array(625).fill('');
+let pom = 'o';
+const them = other_player(pom);
+// console.log("counts", lc.counts);
+grid[24] = 'x';
+grid[12] = 'o';
+grid[0] = 'x';
+let lines_checked = 0;
+let usmax = -20000000000;
+let maxpos;
+let themmax;
+let negthem;
+for (let posi = 0; posi < 25; posi++){
+		if (grid[posi] != ''){
+				continue;
+		}
+		const grid1 = grid.slice();
+	    grid1[posi] = pom;
+		const lc1 = new LetterCounts();
+		//console.log("lc1", lc1);
+		const paths1 = get_paths(posi);
+		for (let paths1i = 0; paths1i < paths1.lenth; paths1i++){
+				const [base1, slice1] = paths1[paths1i];
+				lc1.adj_counts(grid1, base1, stride1, pom);
+		}
+		const score1 = score_counts(lc1, pom);
+		if (score1 > 1000000000) {
+				console.log('winner! chicken dinner!'); // should break here
+				maxpos = posi;
+				break;
+		}
+
+        themmax = -2000000000;
+		for (let posii = 0; posii < 25; posii++){
+				if (grid1[posii] != ''){
+						continue;
+				}
+				const grid2 = grid1.slice();
+				const lc2 = new LetterCounts(lc1.counts);
+				const paths2 = get_paths(posii);
+				for (let paths2i = 0; paths2i < paths2.length; paths2i++){
+						lines_checked += 1;
+				        const [base2, stride2] = paths2[paths2i];
+						//console.log("lc2", lc2);
+						lc2.adj_counts(grid2, base2, stride2, them);
+				}
+				const score2 = (score_counts(lc2, them) + Math.random() * 200);
+				//console.log("score2", score2, "themmax", themmax);
+				if (score2 > themmax) {
+						themmax = score2;
+						//console.log("posi", posi, "best possii (so far)", posii);
+				}
+		}
+		negthem = -themmax;
+		if (negthem > usmax){
+				usmax = negthem;
+				maxpos = posi;
+		}
+		//console.log("posi", posi, "themmax", themmax, "usmax", usmax);
 }
 
-let paths = get_paths(312);
- console.log(paths);
-
+console.log("elapsed", (Date.now() - start) / 1000, "lines_checked", lines_checked, "maxpos", maxpos, "usmax", usmax);
