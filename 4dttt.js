@@ -330,64 +330,64 @@ function get_random_move(grid, pom){
 }
 
 function get_2ply_move(grid, pom){
-		const them = other_player(pom);
-		const lc = new LetterCounts();
-		// console.log("counts", lc.counts);
-		let lines_checked = 0;
-		let usmax = -20000000000;
-		let maxpos;
-		let themmax;
-		let negthem;
-		for (let posi = 0; posi < 75; posi++){
-				if (grid[posi] != ''){
-						continue;
-				}
-				const grid1 = grid.slice();
-				grid1[posi] = pom;
-				const lc1 = new LetterCounts();
-				//console.log("lc1", lc1);
-				const paths1 = get_paths(posi);
-				for (let paths1i = 0; paths1i < paths1.lenth; paths1i++){
-						const [base1, slice1] = paths1[paths1i];
-						lc1.adj_counts(grid1, base1, stride1, pom);
-				}
-				const score1 = score_counts(lc1, pom);
-				if (score1 > 1000000000) {
-						console.log('winner! chicken dinner!'); // should break here
-						maxpos = posi;
-						break;
-				}
+        const them = other_player(pom);
+        const lc = new LetterCounts();
+        // console.log("counts", lc.counts);
+        let usmax = -20000000000;
+        let maxpos;
+        let themmax;
+        let negthem;
+        for (let posi = 0; posi < 625 ; posi++){
+                if (grid[posi] != ''){
+                        continue;
+                }
+                const grid1 = grid.slice();
+                grid1[posi] = pom;
+                const lc1 = new LetterCounts();
+                //console.log("lc1", lc1);
+                const paths1 = get_paths(posi);
+                for (let paths1i = 0; paths1i < paths1.length; paths1i++){
+                        const [base1, stride1] = paths1[paths1i];
+                        lc1.adj_counts(grid1, base1, stride1, pom);
+                }
+                const score1 = score_counts(lc1, pom);
+                if (score1 > 1000000000) {
+                        console.log('winner! chicken dinner!'); // should break here
+                        maxpos = posi;
+                        break;
+                }
 
-				themmax = -2000000000;
-				themmax = -2000000000;
-				for (let posii = 0; posii < 625; posii++){
-						if (grid1[posii] != ''){
-								continue;
-						}
-						const grid2 = grid1.slice();
-						const lc2 = new LetterCounts(lc1.counts);
-						const paths2 = get_paths(posii);
-						for (let paths2i = 0; paths2i < paths2.length; paths2i++){
-								lines_checked += 1;
-								const [base2, stride2] = paths2[paths2i];
-								//console.log("lc2", lc2);
-								lc2.adj_counts(grid2, base2, stride2, them);
-						}
-						const score2 = (score_counts(lc2, them) + Math.random() * 200);
-						//console.log("score2", score2, "themmax", themmax);
-						if (score2 > themmax) {
-								themmax = score2;
-								//console.log("posi", posi, "best possii (so far)", posii);
-						}
-				}
-				negthem = -themmax;
-				if (negthem > usmax){
-						usmax = negthem;
-						maxpos = posi;
-				}
-				//console.log("posi", posi, "themmax", themmax, "usmax", usmax);
-		}
-		return maxpos;
+                themmax = -2000000000;
+                for (let posii = 0; posii < 625; posii++){
+                        if (grid1[posii] != ''){
+                                continue;
+                        }
+                        const grid2 = grid1.slice();
+                        grid2[posii] = them;
+                        const lc2 = new LetterCounts(lc1.counts);
+                        const paths2 = get_paths(posii);
+                        for (let paths2i = 0; paths2i < paths2.length; paths2i++){
+                                const [base2, stride2] = paths2[paths2i];
+                                //console.log("lc2", lc2);
+                                lc2.adj_counts(grid2, base2, stride2, them);
+                        }
+                        //console.log("counts", lc2.counts)
+                        const score2 = (score_counts(lc2, them) + Math.random() * 200);
+                        //console.log("posi", posi, "posii", posii, "score2", score2, "themmax", themmax);
+                        if (score2 > themmax) {
+                                themmax = score2;
+                                //console.log("posi", posi, "best possii (so far)", posii);
+                        }
+                }
+                negthem = -themmax;
+                if (negthem > usmax){
+                        usmax = negthem;
+                        maxpos = posi;
+                }
+                //console.log("posi", posi, "themmax", themmax, "usmax", usmax);
+        }
+        console.log("usmax", usmax);
+        return maxpos;
 }
 
 const canvas = document.getElementById('the_canvas');
@@ -494,8 +494,8 @@ function handle_canvas_click(e) {
 		if (the_game.done) return;
 		if (the_game.mode == 'pvc'){
 				the_game.computer_moving = true;
-				const computer_move = get_random_move(the_game.grid, the_game.pom);
-				// const computer_move = get_2ply_move(the_game.grid, the_game.pom);
+				//const computer_move = get_random_move(the_game.grid, the_game.pom);
+				const computer_move = get_2ply_move(the_game.grid, the_game.pom);
 				the_game.append_move(computer_move);
 				the_game.computer_moving = false;
 				redraw_canvas();
