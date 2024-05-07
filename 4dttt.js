@@ -123,11 +123,10 @@ function compli_coords(coords, direction){
 function get_paths(pos){
     let result = [];
     let coords = pos_coords(pos);
-    // do the stright line paths separately. All points are in 4.
-    for (let stridei = 0; stridei < strides.length; stridei++){
-            let stride = strides[stridei];
-            let steps = Math.floor(pos / stride);
-            result.push([pos - steps * stride, stride]);
+    // do the straight line paths separately. All points are in 4 paths.
+    for (let coordii = 0; coordii < 4; coordii++){
+            let stride = strides[coordii];
+            result.push([pos - coords[coordii] * stride, stride]);
     }
     for (let var_dimc = 2; var_dimc < 5; var_dimc++){
         let all_var_dims = k_combinations(dims, var_dimc);
@@ -302,12 +301,10 @@ class GameState {
 							break;
 					}
 			}
-			if (!this.winner){
-				this.toggle_pom();
-			}
+			this.toggle_pom();
 	}
     undo_move() {
-			//console.log("undoing move");
+			console.log("undoing move");
 			if (this.moves.length == 0){
 					return;
 			}
@@ -386,7 +383,7 @@ function get_2ply_move(grid, pom){
                 }
                 //console.log("posi", posi, "themmax", themmax, "usmax", usmax);
         }
-        console.log("usmax", usmax);
+        // console.log("usmax", usmax);
         return maxpos;
 }
 
@@ -398,20 +395,20 @@ const pb = 6; // boundary between planes
 const sqb = 2; // boundary between squares
 const sqs = 16; //square size
 
-const sqbc = "black";
-const sqc = "lightgray";
-const pbc = "dodgerblue";
-const wc = "lightsalmon";
+const square_boundary_color = "black";
+const square_color = "lightgray";
+const plane_boundary_color = "dodgerblue";
+const win_color = "crimson";
+const last_move_color = "gold";
 
 
 function redraw_canvas(){
 	const ctx = canvas.getContext("2d");
-	ctx.fillStyle = sqc;
+	ctx.fillStyle = square_color;
 	ctx.fillRect(0, 0, canvas.width, canvas.height);
 	let ii, iii;
 	let x, y;
-	// boundaries between squares in a plane
-	ctx.fillStyle = sqbc;
+	ctx.fillStyle = square_boundary_color;
 	for (ii = 0; ii < 6; ii++){
 			for (iii = 0; iii < 6; iii++){
 					x = pb + ii * (pb + sqs * 5 + sqb * 6) + iii * (sqb + sqs);
@@ -420,16 +417,23 @@ function redraw_canvas(){
 					ctx.fillRect(0, y, canvas.width, sqb);
 			}
 	}
-	// boundaries between planes
-	ctx.fillStyle = pbc;
+	ctx.fillStyle = plane_boundary_color;
 	for (ii = 0; ii < 6; ii++){
 		x = ii * (pb + sqs * 5 + sqb * 6);
 		ctx.fillRect(x, 0, pb, canvas.height);
 		y = ii * (pb + sqs * 5 + sqb * 6);
 		ctx.fillRect(0, y, canvas.width, pb);
 	}
+	if (the_game.moves.length > 0){
+	    ctx.fillStyle = last_move_color;
+		const lm_pos = the_game.moves[the_game.moves.length - 1];
+		const lm_coords = pos_coords(lm_pos);
+		y = lm_coords[0] * (pb + sqs * 5 + sqb * 6) + lm_coords[1] * (sqb + sqs) + pb + sqb; 
+		x = lm_coords[2] * (pb + sqs * 5 + sqb * 6) + lm_coords[3] * (sqb + sqs) + pb + sqb;
+		ctx.fillRect(x, y, sqs, sqs);
+	}
 	if (the_game.winner){
-			ctx.fillStyle = wc;
+			ctx.fillStyle = win_color;
 			const [base, stride] = the_game.win_line;
 			console.log("base", base, "stride", stride);
 			for (let wpos = base; wpos < base + stride * 5; wpos += stride){
@@ -441,7 +445,7 @@ function redraw_canvas(){
 			}
 	}
 	// noughts and crosses
-	ctx.fillStyle = sqbc;
+	ctx.fillStyle = square_boundary_color;
 	for (ii = 0; ii < 625; ii++){
 		if (the_game.grid[ii] != ''){ 
 		    const coords = pos_coords(ii);
@@ -450,6 +454,7 @@ function redraw_canvas(){
 			ctx.fillText(the_game.grid[ii], text_pos[0], text_pos[1]);
 		}
 	}
+	
 
 }
 
@@ -479,6 +484,25 @@ function get_click_square(e) {
 	return pos;
 }
 
+function resolveAfter20ms() {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      resolve('resolved');
+    }, 20);
+  });
+}
+
+async function do_computer_move(){
+		the_game.computer_moving = true;
+		await resolveAfter20ms();
+		//const computer_move = get_random_move(the_game.grid, the_game.pom);
+		const computer_move = get_2ply_move(the_game.grid, the_game.pom);
+		the_game.append_move(computer_move);
+		the_game.computer_moving = false;
+		console.log("computer moved", computer_move);
+		redraw_canvas();
+}
+
 function handle_canvas_click(e) {
 	if (the_game.done) {
 			return;
@@ -491,13 +515,10 @@ function handle_canvas_click(e) {
 	if (the_game.grid[pos] == ""){
 		the_game.append_move(pos);
 		redraw_canvas();
+		console.log("canvas redrawn?");
 		if (the_game.done) return;
 		if (the_game.mode == 'pvc'){
-				the_game.computer_moving = true;
-				//const computer_move = get_random_move(the_game.grid, the_game.pom);
-				const computer_move = get_2ply_move(the_game.grid, the_game.pom);
-				the_game.append_move(computer_move);
-				the_game.computer_moving = false;
+				do_computer_move();
 				redraw_canvas();
 		}
 	}
@@ -518,6 +539,13 @@ function handle_new_game(){
 		const mode = document.getElementById("frm").elements["mode"].value;
 		console.log("new game");
 		the_game = new GameState(mode);
+		if (mode == "pvc"){
+				const player_letter =  document.getElementById("frm").elements["letter"].value;
+				if (player_letter == 'o'){
+						console.log("doing computer move?")
+						do_computer_move();
+				}
+		}
 		redraw_canvas();
 }
 

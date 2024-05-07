@@ -21,11 +21,10 @@ function compli_coords(coords, direction){
 function get_paths(pos){
 	let result = [];
 	let coords = pos_coords(pos);
-	// do the stright line paths separately. All points are in 4.
-	for (let stridei = 0; stridei < strides.length; stridei++){
-			let stride = strides[stridei];
-			let steps = Math.floor(pos / stride);
-			result.push([pos - steps * stride, stride]);
+	// do the straight line paths separately. All points are in 4 paths.
+	for (let coordii = 0; coordii < 4; coordii++){
+			let stride = strides[coordii];
+			result.push([pos - coords[coordii] * stride, stride]);
 	}
 	for (let var_dimc = 2; var_dimc < 5; var_dimc++){
 		let all_var_dims = k_combinations(dims, var_dimc);
@@ -135,5 +134,7 @@ grid[9] = 'x';
 grid[14] = 'x';
 grid[19] = 'x';
 let pom = 'o';
-let maxpos = get_2ply_move(grid, pom);
-console.log("elapsed", (Date.now() - start) / 1000, "maxpos", maxpos);
+//let maxpos = get_2ply_move(grid, pom);
+//console.log("elapsed", (Date.now() - start) / 1000, "maxpos", maxpos);
+let pos = 6;
+console.log("pos", pos, "paths", get_paths(pos));
