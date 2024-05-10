@@ -403,6 +403,7 @@ const last_move_color = "gold";
 
 
 function redraw_canvas(){
+	console.log("Called redraw_canvas", Math.random());
 	const ctx = canvas.getContext("2d");
 	ctx.fillStyle = square_color;
 	ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -424,14 +425,7 @@ function redraw_canvas(){
 		y = ii * (pb + sqs * 5 + sqb * 6);
 		ctx.fillRect(0, y, canvas.width, pb);
 	}
-	if (the_game.moves.length > 0){
-	    ctx.fillStyle = last_move_color;
-		const lm_pos = the_game.moves[the_game.moves.length - 1];
-		const lm_coords = pos_coords(lm_pos);
-		y = lm_coords[0] * (pb + sqs * 5 + sqb * 6) + lm_coords[1] * (sqb + sqs) + pb + sqb; 
-		x = lm_coords[2] * (pb + sqs * 5 + sqb * 6) + lm_coords[3] * (sqb + sqs) + pb + sqb;
-		ctx.fillRect(x, y, sqs, sqs);
-	}
+
 	if (the_game.winner){
 			ctx.fillStyle = win_color;
 			const [base, stride] = the_game.win_line;
@@ -443,6 +437,14 @@ function redraw_canvas(){
 				 console.log("x", x, "y", y);
 				 ctx.fillRect(x, y, sqs, sqs);
 			}
+	}
+	if (the_game.moves.length > 0){
+	    ctx.fillStyle = last_move_color;
+		const lm_pos = the_game.moves[the_game.moves.length - 1];
+		const lm_coords = pos_coords(lm_pos);
+		y = lm_coords[0] * (pb + sqs * 5 + sqb * 6) + lm_coords[1] * (sqb + sqs) + pb + sqb; 
+		x = lm_coords[2] * (pb + sqs * 5 + sqb * 6) + lm_coords[3] * (sqb + sqs) + pb + sqb;
+		ctx.fillRect(x, y, sqs, sqs);
 	}
 	// noughts and crosses
 	ctx.fillStyle = square_boundary_color;
@@ -501,6 +503,11 @@ async function do_computer_move(){
 		the_game.computer_moving = false;
 		console.log("computer moved", computer_move);
 		redraw_canvas();
+		if (the_game.mode == 'cvc'){
+				if (!the_game.done) {
+						setTimeout(do_computer_move, 1000);
+				}
+		}
 }
 
 function handle_canvas_click(e) {
@@ -508,6 +515,9 @@ function handle_canvas_click(e) {
 			return;
 	}
 	if (the_game.computer_moving){
+			return;
+	}
+	if (the_game.mode == 'cvc'){
 			return;
 	}
 	pos = get_click_square(e);
@@ -542,9 +552,11 @@ function handle_new_game(){
 		if (mode == "pvc"){
 				const player_letter =  document.getElementById("frm").elements["letter"].value;
 				if (player_letter == 'o'){
-						console.log("doing computer move?")
+						console.log("doing computer move.");
 						do_computer_move();
 				}
+		} else if (mode == "cvc"){
+				do_computer_move();
 		}
 		redraw_canvas();
 }

@@ -1,12 +1,16 @@
 <html>
-		<head><title>4D Tic tac Toe</title>
+		<head><title>4D Tic Tac Toe</title>
 		</head>
 		<body>
 				<form id="frm">
+				<span>Mode</span>
 				<input type="radio" name="mode" value="pvc"id="mode_pvc">
 				<label for="mode_pvc">PVC</label>
 				<input type="radio" name="mode" value="pvp" checked id="mode_pvp">
 				<label for="mode_pvp">PVP</label>
+				<input type="radio" name="mode" value="cvc" id="mode_cvc">
+				<label for="mode_cvc">CVC</label>
+                <span>Letter</span>
 				<input type="radio" name="letter" value="x" checked id="letter_x">
 				<label for="letter_x">x</label>
 				<input type="radio" name="letter" value="o" id="letter_o">
@@ -14,6 +18,7 @@
 			    <button type="button" id="btn_undo">Undo</button>
 			    <button type="button" id="btn_new_game">New Game</button>
 				</form>
+				<a href="./help.html">help</a>
 				<br>
 				<canvas height="476" width="476" id="the_canvas"></canvas>
 
