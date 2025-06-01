@@ -1,0 +1,45 @@
+For the 4 "straight" directions, the 3 constant dimensions can be of any value. The stride is the
+stride of that dimension, the base is zero in that dimension plus the constant values.
+
+For a 2 constant 2 varying diagonal, the two constant dimensions can again be of any value.
+
+The stride is + the value of the more significant dimension, and + or - the value of the less significant dimension.
+
+The base values are zero of the more significant dimension, and 0 or max (4) of the other dimension.
+
+And so on when we add dimensions. For a constant the value of the base is arbitrary. for a diagnonal, the
+most significant dimension starts at 0 and always increases,the others either start at 0 or max, and increase or 
+decrease.
+
+
+consider a concrete example: fixed cords are 1,2,3 and only the final diemsnsion varies.
+stride is 1, base is 125 + 50 + 15 = 190
+
+but what does this look like for our iterator? const dims should be [0,1,2]
+so our basebase should be zip(strides, [1,2,3]) right?
+
+---
+Duh, we just want to check for a win using the sqaure we just played. When evaluating a position we probably only
+want to have to look at changes instead of everything also, right?
+
+So I think we want a get_lines(square) function which will return all lines containg a pount, using the
+base, offst sequence.
+
+every point is along a line in the 4 linera dimensions, but to be along a 2 diagonal it must be along
+a plane etc. So if you look along the possible strides, going back along a line will get you to
+0 in the most significant dimension, and 0 or max along the others.
+
+
+We might want something like that for planes also, but it's less clear how we identify a plane. I guess we
+should be able to identify it as a lowest index and 2 offesets, right? But that is for another day, if ever.
+
+
+I don't know if we will even need/use an all lines function. For checking for wins, we just need to
+check lines through the newly added square. But even for evaluation we may not need it, because if we are scoring
+by lines, we just need to know what changed.
+
+For now to get computer move, I think we need 2-ply look ahead and beyond that just a heuristc based on counts of lines:
+if comp can win on the move, it should. Otherwise it reponds with a  max-min for position after the player moves.
+The player should consider 2 4 lines to be a sure loss, but otherwise I think we should just have a linear score for
+n sqaures with the others blank. For first cut we arbitarily score all blocked lines as zero, although really each kind
+of blocked line could deserve a different nonzero score.
